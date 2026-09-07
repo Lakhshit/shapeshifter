@@ -300,7 +300,7 @@ canvas {
     </div>
   </div>
   
-  <button class="start-button" id="startBtn" onclick="startGame()">START GAME ▶</button>
+  <button class="start-button" id="startBtn" onclick="startGame()" disabled>START GAME ▶</button>
 </div>
 
 <div id="container">
@@ -360,7 +360,7 @@ function selectCharacter(index) {
       card.classList.remove('selected');
     }
   });
-  // ✅ Button is always enabled - no need to enable it!
+  document.getElementById('startBtn').disabled = false;
 }
 
 function startGame() {
@@ -492,7 +492,6 @@ const game = {
   bricksCollected: 0,
   totalBricks: 0,
   birds: [],
-  waterCreatures: [],  // ✅ Water creatures (fish, frogs, turtles)
   rescueMessage: '',  // ✅ Add rescue message display
   isStarting: true,  // ✅ ADD FLAG TO PREVENT COLLISIONS AT START!
   player: {
@@ -687,32 +686,8 @@ function update() {
       width: 160,
       height: 160
     };
-    // ✅ ONLY TRIGGER IF: bird is flying AND hasn't been hit yet!
-    if (bird.state === 'flying' && !bird.hasBeenHit && checkCollision(game.player, birdHitBox)) {
+    if (checkCollision(game.player, birdHitBox)) {
       console.log('🦅 BIRD HIT! Falling now!');
-      showLevelMessage('🦅 BIRD FALLING! 👩‍🌾');
-      playLoseLife();
-      loseLife();
-      bird.state = 'falling';
-      bird.vy = 2;
-      bird.hasBeenHit = true;  // ✅ MARK AS HIT - PREVENT DOUBLE COLLISION!
-      
-      // CREATE RESCUER WOMAN - ONLY IF GAME IS NOT OVER!
-      if (game.lives > 0) {
-        if (!bird.rescuer) {
-          bird.rescuer = {
-            x: 1400,  // Start from right (jungle)
-            y: 700,
-            targetX: 1200,
-            targetY: 700,
-            hasBird: false,
-            state: 'walking_to_bird',
-            speed: 3
-          };
-        }
-      }
-    }
-  }
       showLevelMessage('🦅 BIRD FALLING! 👩‍🌾');
       playLoseLife();
       loseLife();
@@ -747,9 +722,6 @@ function update() {
   
   // Update birds and rescuers (happens even during pause)
   updateBirdsAndRescuer();
-  
-  // Update water creatures (they move even during rescue)
-  // updateWaterCreatures();  // ✅ DISABLED - NO WATER CREATURES!
 }
 
 function updateBirdsAndRescuer() {
@@ -827,44 +799,6 @@ function updateBirdsAndRescuer() {
           console.log('✅ Rescuer completely off screen! Bird safely rescued! Game resuming...');
         }
       }
-    }
-  }
-}
-
-function updateWaterCreatures() {
-  // Update water creatures movement
-  for (let creature of game.waterCreatures) {
-    creature.x += creature.vx;
-    
-    // Wrap around screen
-    if (creature.x > 1500) {
-      creature.x = -50;
-    }
-    
-    // Update animation phase
-    if (creature.type === 'fish') {
-      creature.phase += 0.1;
-    } else if (creature.type === 'frog') {
-      creature.hopPhase += 0.05;
-    }
-    
-    // ✅ SKIP COLLISION CHECKS DURING STARTUP (first 60 frames)!
-    if (game.isStarting) continue;
-    
-    // Check collision with player - if player falls on creature
-    const creatureHitBox = {
-      x: creature.x - 20,
-      y: creature.y - 15,
-      width: 40,
-      height: 30
-    };
-    
-    if (checkCollision(game.player, creatureHitBox)) {
-      // Player hit water creature!
-      console.log('💥 Hit water creature!');
-      game.rescueMessage = '💥 OW! HIT ' + creature.type.toUpperCase() + '!';
-      playLoseLife();
-      loseLife();
     }
   }
 }
@@ -1001,14 +935,9 @@ function initBirds() {
       vy: 0,
       type: types[Math.floor(Math.random() * types.length)],
       wingPhase: Math.random() * Math.PI * 2,
-      state: 'flying',
-      hasBeenHit: false  // ✅ FLAG TO PREVENT MULTIPLE COLLISIONS!
+      state: 'flying'
     });
   }
-}
-
-function initWaterCreatures() {
-  game.waterCreatures = [];  // ✅ EMPTY - NO CREATURES!
 }
 
 function drawBird(bird) {
@@ -1459,293 +1388,12 @@ function drawRescuer(bird) {
   ctx.restore();
 }
 
-function drawWaterCreatures() {
-  for (let creature of game.waterCreatures) {
-    ctx.save();
-    
-    if (creature.type === 'fish') {
-      // Draw LARGE, REALISTIC FISH
-      ctx.translate(creature.x, creature.y);
-      
-      // Determine fish color
-      let fishColor = '#FFD700';  // gold
-      let fishAccent = '#FFA500';
-      if (creature.fishType === 'bluefish') {
-        fishColor = '#1E90FF';
-        fishAccent = '#00BFFF';
-      }
-      if (creature.fishType === 'redfish') {
-        fishColor = '#FF6347';
-        fishAccent = '#FF4500';
-      }
-      
-      // Fish body - wavy motion (LARGE!)
-      const wiggle = Math.sin(creature.phase) * 4;
-      ctx.translate(wiggle, 0);
-      
-      // Fish body with gradient effect
-      ctx.fillStyle = fishColor;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 25, 14, 0, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Fish scales - realistic pattern
-      ctx.strokeStyle = fishAccent;
-      ctx.lineWidth = 1;
-      for (let i = -20; i < 0; i += 8) {
-        for (let j = -8; j <= 8; j += 8) {
-          ctx.beginPath();
-          ctx.arc(i, j, 2.5, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      }
-      
-      // Fish head - larger
-      ctx.fillStyle = fishAccent;
-      ctx.beginPath();
-      ctx.arc(18, 0, 12, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Fish mouth
-      ctx.fillStyle = '#000';
-      ctx.beginPath();
-      ctx.arc(26, 1, 2, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Fish eye - BIG!
-      ctx.fillStyle = '#FFF';
-      ctx.beginPath();
-      ctx.arc(22, -6, 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.beginPath();
-      ctx.arc(23, -6, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#FFF';
-      ctx.beginPath();
-      ctx.arc(24, -5, 1, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Fish top fin
-      ctx.fillStyle = fishAccent;
-      ctx.beginPath();
-      ctx.moveTo(-5, -14);
-      ctx.lineTo(5, -22);
-      ctx.lineTo(8, -14);
-      ctx.closePath();
-      ctx.fill();
-      
-      // Fish bottom fin
-      ctx.beginPath();
-      ctx.moveTo(-5, 14);
-      ctx.lineTo(5, 22);
-      ctx.lineTo(8, 14);
-      ctx.closePath();
-      ctx.fill();
-      
-      // Fish tail - LARGE and DETAILED
-      ctx.fillStyle = fishColor;
-      ctx.beginPath();
-      ctx.moveTo(-25, -8);
-      ctx.lineTo(-42, -16);
-      ctx.lineTo(-42, 16);
-      ctx.lineTo(-25, 8);
-      ctx.closePath();
-      ctx.fill();
-      
-      // Tail stripes
-      ctx.strokeStyle = fishAccent;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-32, -6);
-      ctx.lineTo(-36, -12);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(-32, 6);
-      ctx.lineTo(-36, 12);
-      ctx.stroke();
-      
-    } else if (creature.type === 'frog') {
-      // Draw LARGE, REALISTIC FROG
-      ctx.translate(creature.x, creature.y);
-      
-      // Hopping motion
-      const hopHeight = Math.abs(Math.sin(creature.hopPhase)) * 15;
-      ctx.translate(0, -hopHeight);
-      
-      // Frog body - LARGE!
-      ctx.fillStyle = '#32CD32';
-      ctx.beginPath();
-      ctx.ellipse(0, 3, 18, 16, 0, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Frog back bumps - realistic texture
-      ctx.fillStyle = '#228B22';
-      for (let i = -8; i <= 8; i += 8) {
-        ctx.beginPath();
-        ctx.arc(i, 0, 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      
-      // Frog head - LARGE!
-      ctx.fillStyle = '#3CB371';
-      ctx.beginPath();
-      ctx.arc(0, -12, 12, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Frog eyes - BIG and BULGING!
-      ctx.fillStyle = '#FFF';
-      ctx.beginPath();
-      ctx.arc(-7, -18, 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(7, -18, 6, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Eye pupils - realistic
-      ctx.fillStyle = '#000';
-      ctx.beginPath();
-      ctx.arc(-7, -18, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(7, -18, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Eye shine
-      ctx.fillStyle = '#FFF';
-      ctx.beginPath();
-      ctx.arc(-5.5, -19, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(8.5, -19, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Frog mouth
-      ctx.strokeStyle = '#228B22';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, -8, 5, 0, Math.PI);
-      ctx.stroke();
-      
-      // Tongue
-      ctx.fillStyle = '#FF69B4';
-      ctx.beginPath();
-      ctx.ellipse(0, -5, 3, 2, 0, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Front legs
-      ctx.fillStyle = '#32CD32';
-      ctx.beginPath();
-      ctx.ellipse(-12, 10, 7, 5, -0.3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(12, 10, 7, 5, 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Back legs - LARGE!
-      ctx.beginPath();
-      ctx.ellipse(-16, 18, 10, 7, -0.4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(16, 18, 10, 7, 0.4, 0, Math.PI * 2);
-      ctx.fill();
-      
-    } else if (creature.type === 'turtle') {
-      // Draw LARGE, REALISTIC TURTLE
-      ctx.translate(creature.x, creature.y);
-      
-      // Turtle shell - LARGE and DETAILED!
-      ctx.fillStyle = '#8B4513';
-      ctx.beginPath();
-      ctx.ellipse(0, -2, 24, 18, 0, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Shell pattern - hexagonal sections (very realistic!)
-      ctx.strokeStyle = '#654321';
-      ctx.lineWidth = 2;
-      ctx.fillStyle = '#A0522D';
-      
-      // Center hexagon
-      for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 3; col++) {
-          const x = (col - 1) * 10;
-          const y = (row - 1) * 10 - 2;
-          ctx.beginPath();
-          ctx.arc(x, y, 5, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-        }
-      }
-      
-      // Turtle head - LARGE and detailed!
-      ctx.fillStyle = '#A0522D';
-      ctx.beginPath();
-      ctx.arc(-18, 0, 10, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Turtle head detail
-      ctx.fillStyle = '#8B4513';
-      ctx.beginPath();
-      ctx.arc(-18, 2, 8, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Turtle nose
-      ctx.fillStyle = '#654321';
-      ctx.beginPath();
-      ctx.arc(-24, 0, 2, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Turtle eye - LARGE!
-      ctx.fillStyle = '#FFD700';
-      ctx.beginPath();
-      ctx.arc(-22, -5, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.beginPath();
-      ctx.arc(-22, -5, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#FFF';
-      ctx.beginPath();
-      ctx.arc(-21, -6, 1, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Turtle front legs
-      ctx.fillStyle = '#A0522D';
-      ctx.beginPath();
-      ctx.ellipse(-10, 15, 7, 9, -0.3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(10, 15, 7, 9, 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Turtle back legs
-      ctx.beginPath();
-      ctx.ellipse(-12, 22, 6, 8, -0.3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(12, 22, 6, 8, 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Turtle tail
-      ctx.fillStyle = '#8B4513';
-      ctx.beginPath();
-      ctx.moveTo(0, 18);
-      ctx.lineTo(-3, 28);
-      ctx.lineTo(3, 28);
-      ctx.closePath();
-      ctx.fill();
-    }
-    
-    ctx.restore();
-  }
-}
 
 function draw() {
   const level = levels[game.level];
   ctx.fillStyle = level.bgColor; ctx.fillRect(0, 0, canvas.width, canvas.height);
   drawTheme();
   drawWater();  // ✅ Draw animated water at bottom (no creatures!)
-  // drawWaterCreatures();  // ✅ DISABLED - NO WATER CREATURES!
   
   // Draw flying birds and rescuers
   for (let bird of game.birds) {
